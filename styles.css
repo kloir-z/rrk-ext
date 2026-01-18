@@ -1,0 +1,116 @@
+/* 楽楽勤怠カスタマイザー - カスタムスタイル */
+
+/* テーブルレイアウトの固定 */
+#moveTable table {
+  table-layout: auto !important;
+  width: auto !important;
+}
+
+/* 申請内容列の幅を制限 */
+#moveTable th.wide,
+#moveTable td[colspan="2"] {
+  max-width: 300px !important;
+  width: auto !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 備考列は広めに */
+#moveTable th.column_remarks,
+#moveTable td.column_remarks,
+#moveTable td.remark,
+#moveTable td.edit_mode.remark {
+  max-width: var(--rrk-remarks-width, 500px) !important;
+  min-width: var(--rrk-remarks-width, 400px) !important;
+  width: var(--rrk-remarks-width, 400px) !important;
+}
+
+/* 備考列の入力フィールドも広めに */
+#moveTable td.column_remarks input[type="text"],
+#moveTable td.column_remarks textarea,
+#moveTable td.column_remarks .table_edit_area input,
+#moveTable td.column_remarks .table_edit_area textarea,
+#moveTable td.remark input[type="text"],
+#moveTable td.remark textarea,
+#moveTable td.remark .table_edit_area input,
+#moveTable td.remark .table_edit_area textarea,
+#moveTable td.edit_mode.remark input[type="text"],
+#moveTable td.edit_mode.remark textarea {
+  width: 100% !important;
+  min-width: calc(var(--rrk-remarks-width, 400px) - 40px) !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* 備考列の表示エリアも幅を確保 */
+#moveTable td.column_remarks .table_display_area,
+#moveTable td.column_remarks .table_edit_area,
+#moveTable td.remark .table_display_area,
+#moveTable td.remark .table_edit_area,
+#moveTable td.edit_mode.remark .table_display_area,
+#moveTable td.edit_mode.remark .table_edit_area {
+  width: auto !important;
+  min-width: calc(var(--rrk-remarks-width, 400px) - 30px) !important;
+  max-width: calc(var(--rrk-remarks-width, 400px) - 10px) !important;
+  box-sizing: border-box !important;
+}
+
+/* ダブルクリック可能な行にカーソルを変更 */
+#fixedTable tbody tr,
+#moveTable tbody tr {
+  cursor: pointer;
+}
+
+/* ホバー時のハイライト（全体を少し暗くする） */
+#fixedTable tbody tr:hover,
+#moveTable tbody tr:hover,
+#fixedTable tbody tr.rrk-hover,
+#moveTable tbody tr.rrk-hover {
+  filter: brightness(0.88);
+}
+
+/* 曜日別の背景色（CSS変数で動的に変更可能） */
+/* 平日（色付け機能がオンの時は交互色を無効化して白背景にする） */
+#fixedTable tbody tr.rrk-weekday,
+#moveTable tbody tr.rrk-weekday {
+  background-color: #ffffff !important;
+}
+
+#fixedTable tbody tr.rrk-saturday,
+#moveTable tbody tr.rrk-saturday {
+  background-color: var(--rrk-saturday-color, rgba(224, 240, 255, 1)) !important;
+}
+
+#fixedTable tbody tr.rrk-sunday-holiday,
+#moveTable tbody tr.rrk-sunday-holiday {
+  background-color: var(--rrk-sunday-holiday-color, rgba(255, 237, 237, 1)) !important;
+}
+
+/* 選択された行（チェックされている行）*/
+#fixedTable tbody tr.rrk-selected,
+#moveTable tbody tr.rrk-selected {
+  background-color: #fff3cd !important;
+}
+
+/* 選択された行のホバー時は少し濃くする */
+#fixedTable tbody tr.rrk-selected:hover,
+#moveTable tbody tr.rrk-selected:hover,
+#fixedTable tbody tr.rrk-selected.rrk-hover,
+#moveTable tbody tr.rrk-selected.rrk-hover {
+  background-color: #ffe69c !important;
+  filter: none; /* filterをリセット */
+}
+
+/* 編集モード時のスタイル改善（必要に応じて追加） */
+#moveTable input[type="text"],
+#moveTable input[type="time"] {
+  border: 1px solid #0078d4;
+  padding: 4px;
+  border-radius: 3px;
+}
+
+#moveTable input[type="text"]:focus,
+#moveTable input[type="time"]:focus {
+  outline: 2px solid #0078d4;
+  outline-offset: 1px;
+}
