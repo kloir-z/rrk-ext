@@ -1,0 +1,61 @@
+/* 楽楽勤怠カスタマイザー - 部門クイック絞り込み */
+
+#rrk-quick-filter {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: 6px;
+  margin: 0 12px;
+}
+
+#rrk-quick-filter.rrk-qf-floating {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 10000;
+  margin: 0;
+}
+
+.rrk-qf-button {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 4px;
+  background-color: #0078d4;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.6;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.rrk-qf-button:hover {
+  background-color: #005a9e;
+}
+
+#rrk-qf-toast {
+  position: fixed;
+  right: 16px;
+  bottom: 60px;
+  z-index: 10001;
+  max-width: 400px;
+  padding: 10px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+#rrk-qf-toast.rrk-qf-toast-info {
+  background-color: #e8f1fb;
+  color: #004578;
+}
+
+#rrk-qf-toast.rrk-qf-toast-success {
+  background-color: #dff0d8;
+  color: #3c763d;
+}
+
+#rrk-qf-toast.rrk-qf-toast-error {
+  background-color: #f8d7da;
+  color: #721c24;
+}

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "楽楽勤怠カスタマイザー",
-  "version": "1.0.0",
+  "version": "1.2.2",
   "description": "楽楽勤怠の出勤簿画面をカスタマイズして使いやすくする拡張機能",
   "permissions": [
     "storage",
@@ -13,8 +13,18 @@
   "content_scripts": [
     {
       "matches": ["https://tms.rakurakukintai.jp/app/attendance*"],
+      "exclude_matches": [
+        "https://tms.rakurakukintai.jp/app/attendancemanagement",
+        "https://tms.rakurakukintai.jp/app/attendancemanagement?*"
+      ],
       "js": ["content.js"],
       "css": ["styles.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://tms.rakurakukintai.jp/app/*"],
+      "js": ["quickfilter.js"],
+      "css": ["quickfilter.css"],
       "run_at": "document_idle"
     }
   ],

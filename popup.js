@@ -25,8 +25,13 @@ const PRESET_COLUMNS = {
   basic: IMPORTANT_COLUMNS
 };
 
+// 部門クイック絞り込みのデフォルト部門コード（quickfilter.jsと同じ）
+const DEFAULT_QUICK_FILTER_DEPT = '';
+
 let currentSettings = {};
 let currentRemarksWidth = 400;
+let quickFilterDept = DEFAULT_QUICK_FILTER_DEPT;
+let savedQuickFilterDept = DEFAULT_QUICK_FILTER_DEPT;
 let availableColumns = []; // ページから取得した列名リスト
 
 // 保存済み設定（キャンセル用）
@@ -115,13 +120,18 @@ function loadSettings() {
     'availableColumns',
     'enableRowColors',
     'saturdayColor',
-    'sundayHolidayColor'
+    'sundayHolidayColor',
+    'quickFilterDept'
   ], (result) => {
     // エラーチェック
     if (chrome.runtime.lastError) {
       console.error('設定の読み込みエラー:', chrome.runtime.lastError);
       return;
     }
+
+    quickFilterDept = result.quickFilterDept || DEFAULT_QUICK_FILTER_DEPT;
+    savedQuickFilterDept = quickFilterDept;
+    document.getElementById('quickFilterDept').value = quickFilterDept;
 
     availableColumns = result.availableColumns || [];
     currentRemarksWidth = result.remarksWidth || 400;
@@ -211,7 +221,8 @@ function saveSettings() {
     remarksWidth: currentRemarksWidth,
     enableRowColors: enableRowColors,
     saturdayColor: saturdayColor,
-    sundayHolidayColor: sundayHolidayColor
+    sundayHolidayColor: sundayHolidayColor,
+    quickFilterDept: quickFilterDept
   }, () => {
     // エラーチェック
     if (chrome.runtime.lastError) {
@@ -228,6 +239,7 @@ function saveSettings() {
     savedEnableRowColors = enableRowColors;
     savedSaturdayColor = JSON.parse(JSON.stringify(saturdayColor));
     savedSundayHolidayColor = JSON.parse(JSON.stringify(sundayHolidayColor));
+    savedQuickFilterDept = quickFilterDept;
 
     // インジケーターを非表示
     hideUnsavedIndicator();
@@ -261,6 +273,8 @@ function cancelSettings() {
   enableRowColors = savedEnableRowColors;
   saturdayColor = JSON.parse(JSON.stringify(savedSaturdayColor));
   sundayHolidayColor = JSON.parse(JSON.stringify(savedSundayHolidayColor));
+  quickFilterDept = savedQuickFilterDept;
+  document.getElementById('quickFilterDept').value = quickFilterDept;
 
   // UIを更新
   renderColumnList(currentSettings);
@@ -294,6 +308,8 @@ function resetSettings() {
     enableRowColors = false;
     saturdayColor = { r: 224, g: 240, b: 255, a: 1 };
     sundayHolidayColor = { r: 255, g: 237, b: 237, a: 1 };
+    quickFilterDept = DEFAULT_QUICK_FILTER_DEPT;
+    document.getElementById('quickFilterDept').value = quickFilterDept;
 
     renderColumnList(currentSettings);
 
@@ -377,6 +393,12 @@ document.addEventListener('DOMContentLoaded', () => {
   remarksWidthSlider.addEventListener('input', (e) => {
     currentRemarksWidth = parseInt(e.target.value);
     remarksWidthValue.textContent = `${currentRemarksWidth}px`;
+    showUnsavedIndicator();
+  });
+
+  // 部門クイック絞り込みの部門コード
+  document.getElementById('quickFilterDept').addEventListener('input', (e) => {
+    quickFilterDept = e.target.value.trim();
     showUnsavedIndicator();
   });
 
