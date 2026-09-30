@@ -2,8 +2,6 @@
 // ヘッダーにボタンを追加し、「出勤簿管理」「申請承認」を部門で絞り込んだ状態で開く
 
 (() => {
-  console.log(`楽楽勤怠カスタマイザー: クイック絞り込み読み込み開始 (v${chrome.runtime?.getManifest?.().version})`);
-
   const DEFAULT_DEPT = ''; // 部門コードはポップアップで設定する
   const PENDING_KEY = 'rrkQuickFilterPending';
   const PENDING_TTL = 60 * 1000; // URL直接遷移後に続きを実行する有効期限
@@ -32,7 +30,6 @@
 
   let deptCode = DEFAULT_DEPT;
   let running = false;
-  let startTime = Date.now();
 
   const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -56,7 +53,7 @@
   }
 
   // DOMの変化が一定時間止まるまで待機（画面の読み込み・再描画の完了待ち）
-  function waitForDomIdle() {
+  function waitForDomIdle(root = document.body, quietMs = DOM_QUIET_MS, timeout = DOM_IDLE_TIMEOUT) {
     return new Promise(resolve => {
       let quietTimer = null;
       let timeoutTimer = null;
@@ -68,11 +65,11 @@
       };
       const observer = new MutationObserver(() => {
         clearTimeout(quietTimer);
-        quietTimer = setTimeout(done, DOM_QUIET_MS);
+        quietTimer = setTimeout(done, quietMs);
       });
-      observer.observe(document.body, { childList: true, subtree: true });
-      quietTimer = setTimeout(done, DOM_QUIET_MS);
-      timeoutTimer = setTimeout(done, DOM_IDLE_TIMEOUT);
+      observer.observe(root, { childList: true, subtree: true });
+      quietTimer = setTimeout(done, quietMs);
+      timeoutTimer = setTimeout(done, timeout);
     });
   }
 
@@ -82,10 +79,8 @@
     await waitForDomIdle();
   }
 
-  // 進行状況をコンソール（開始からの経過秒付き）と画面右下に表示
+  // 進行状況を画面右下に表示
   function log(message) {
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.log(`[クイック絞り込み +${elapsed}s] ${message}`);
     if (running) showToast(`${message}…`);
   }
 
@@ -129,8 +124,8 @@
         clickElement(menuItem.querySelector('span') || menuItem);
         await waitFor(() => location.pathname === target.path, 10000, `${target.label}画面`);
         return true;
-      } catch (error) {
-        console.log('メニューから開けなかったため、URLで直接開きます:', error.message);
+      } catch {
+        // メニューから開けない場合はURL直接遷移に切り替える。
       }
     }
 
@@ -174,13 +169,12 @@
     try {
       await waitFor(() => !isPresent(), 3000, description);
     } catch {
-      console.log(`[クイック絞り込み] ${description}が閉じないため、画面の反映を待ちます`);
       await settle();
     }
   }
 
   // クリックして、root内の表示が変わるまで待つ（変化しなければ画面の反映を待って続行）
-  async function clickAndWaitForChange(el, root, description) {
+  async function clickAndWaitForChange(el, root) {
     const changed = new Promise(resolve => {
       const observer = new MutationObserver(() => {
         observer.disconnect();
@@ -195,15 +189,18 @@
     });
     clickElement(el);
     if (!(await changed)) {
-      console.log(`[クイック絞り込み] ${description}の反映が確認できないため、画面の反映を待ちます`);
       await settle();
     }
   }
 
   async function applyDeptFilter(pageOpened) {
-    await waitFor(() => findVisible('div.filter_index'), 15000, '「絞り込み条件」');
-    // 画面を開いた直後は読み込みが落ち着くまで待つ（完了を判定できる目印がないため）
-    if (pageOpened) await settle();
+    log('絞り込み条件の準備を待っています');
+    const filterIndex = await waitFor(() => findVisible('div.filter_index'), 15000, '「絞り込み条件」');
+    // 遷移直後の再描画は条件パネルの周辺だけで確認する。
+    // ページ全体の更新に引きずられず、固定800msの待機も省く。
+    if (pageOpened) {
+      await waitForDomIdle(filterIndex.parentElement || filterIndex, 200, 2000);
+    }
 
     // 絞り込み条件パネルが閉じていれば開く
     let input = findDeptInput();
@@ -214,8 +211,6 @@
       input = await waitFor(findDeptInput, 5000, '部門の入力欄');
     }
 
-    console.log('[クイック絞り込み] 部門の入力欄:', input.outerHTML.slice(0, 300));
-
     const ancestors = [];
     for (let node = input.parentElement; node && node !== document.body; node = node.parentElement) {
       ancestors.push(node);
@@ -224,7 +219,6 @@
     // 入力後、候補リストが表示されるまで少し時間がかかる
     log('部門の入力欄をクリック');
     clickElement(input);
-    await sleep(STEP_WAIT);
     log(`部門コード「${deptCode}」を入力`);
     typeText(input, deptCode);
     let suggestion;
@@ -237,16 +231,18 @@
       typeText(input, deptCode);
       suggestion = await waitFor(findSuggestion, 15000, '部門の候補');
     }
-    // 部門コードを含む候補ならそれが目的の候補なのですぐクリック。含まなければ表示が落ち着くのを待つ
+    // コードが表示されない候補は、リスト周辺の再描画だけを短く待つ。
+    // 部門名のみの表示でもページ全体の更新に引きずられないようにする。
     if (!suggestion.textContent.includes(deptCode)) {
-      await settle();
+      const listRoot = suggestion.closest('div.suggest_list_area') || suggestion.parentElement || suggestion;
+      await waitForDomIdle(listRoot, 200, 2000);
       suggestion = await waitFor(findSuggestion, 5000, '部門の候補');
     }
     // 候補をクリックしても候補リストは閉じないため、選択状態の表示が変わったことで反映を確認する
     log('部門の候補をクリック');
     const suggestionArea = ancestors.find(node => node.contains(suggestion)) ||
       suggestion.closest('div.suggest_list_area') || document.body;
-    await clickAndWaitForChange(suggestion, suggestionArea, '候補の選択');
+    await clickAndWaitForChange(suggestion, suggestionArea);
 
     log('「決定」をクリック');
     const decideButton = await waitFor(() => findDecideButton(ancestors), 5000, '「決定」ボタン');
@@ -262,15 +258,18 @@
 
   async function runQuickFilter(key, reloaded = false) {
     if (running) return;
-    if (!deptCode) {
-      showToast('部門コードが未設定です。拡張機能のポップアップで設定してください', 'error');
-      return;
-    }
     running = true;
-    startTime = Date.now();
     const target = TARGETS[key];
 
     try {
+      // URL直接遷移後の再開も、保存済み設定の読込完了を待ってから判定する。
+      if (!(await settingsReady)) {
+        throw new Error('部門コードの読み込みに失敗しました。ページを再読み込みしてください');
+      }
+      if (!deptCode) {
+        showToast('部門コードが未設定です。拡張機能のポップアップで設定してください', 'error');
+        return;
+      }
       sessionStorage.setItem(PENDING_KEY, JSON.stringify({ key, ts: Date.now() }));
       showToast(`${target.label}を開いています…`);
       const navigated = await navigateTo(target);
@@ -279,7 +278,6 @@
       showToast(`部門「${deptCode}」で絞り込み中…`);
       await applyDeptFilter(navigated || reloaded);
       showToast(`${target.label}を部門「${deptCode}」で絞り込みました`, 'success');
-      console.log(`${target.label}を部門「${deptCode}」で絞り込みました`);
     } catch (error) {
       sessionStorage.removeItem(PENDING_KEY);
       showToast(`自動絞り込みに失敗しました: ${error.message}`, 'error');
@@ -380,16 +378,25 @@
 
   // ===== 初期化 =====
 
-  if (chrome.runtime?.id) {
+  // 失敗も値として返し、ボタン未押下時の未処理Promise rejectionを避ける。
+  const settingsReady = new Promise(resolve => {
+    if (!chrome.runtime?.id) {
+      resolve(false);
+      return;
+    }
     chrome.storage.sync.get(['quickFilterDept'], (result) => {
       if (chrome.runtime.lastError) {
         console.error('部門コードの読み込みエラー:', chrome.runtime.lastError);
+        resolve(false);
         return;
       }
       deptCode = result.quickFilterDept || DEFAULT_DEPT;
       updateButtonLabels();
+      resolve(true);
     });
+  });
 
+  if (chrome.runtime?.id) {
     chrome.storage.onChanged.addListener((changes, namespace) => {
       if (namespace === 'sync' && changes.quickFilterDept) {
         deptCode = changes.quickFilterDept.newValue || DEFAULT_DEPT;
